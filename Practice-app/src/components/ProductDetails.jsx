@@ -29,7 +29,7 @@ export default function ProductDetails({ data }) {
       setLoadingAlt(true);
       setErrorAlt("");
 
-      const response = await fetch("https://eco-dex-backend.onrender.com/api/suggest_alternatives", {
+      const response = await fetch("https://eco-dex.onrender.com/api/suggest_alternatives", {
         method:"POST",
         headers:{
           "Content-Type":"application/json",
