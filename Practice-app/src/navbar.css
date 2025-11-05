@@ -1,0 +1,87 @@
+/* Pure CSS NavBar styles */
+.navbar-container {
+  background-color: #000000;
+  border-bottom: 1px solid rgba(22, 163, 74, 0.6);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 1), 0 4px 8px -2px rgba(22, 163, 74, 0.3);
+}
+
+.navbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.navbar-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar-logo {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #22c55e;
+  letter-spacing: 0.05em;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.navbar-menu {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  gap: 2.5rem;
+}
+
+.navbar-link {
+  color: #d1d5db;
+  text-decoration: none;
+  transition: color 200ms ease;
+  font-weight: 500;
+}
+
+.navbar-link:hover {
+  color: #10b981;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.navbar-mobile {
+  display: none;
+}
+
+.navbar-mobile-btn {
+  color: #d1d5db;
+  transition: color 300ms ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.navbar-mobile-btn:hover {
+  color: #22c55e;
+}
+
+.navbar-mobile-btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .navbar-menu {
+    display: none;
+  }
+
+  .navbar-mobile {
+    display: block;
+  }
+}
