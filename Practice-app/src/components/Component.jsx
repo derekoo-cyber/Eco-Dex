@@ -212,7 +212,7 @@ function Component() {
     setError("");
     try {
       // Minimal logging
-      const res = await fetch("/api/barcode", {
+      const res = await fetch("https://eco-dex-backend.onrender.com/api/barcode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ barcode }),
