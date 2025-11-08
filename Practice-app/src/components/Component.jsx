@@ -101,19 +101,21 @@ function Component() {
       return;
     }
     setError("");
+    console.log("Making API call for barcode:", barcode);
     try {
-      // Minimal logging
       // Use proxy for development to avoid CORS issues
       const apiUrl = import.meta.env.DEV
         ? "/api/barcode"
         : "https://eco-dex.onrender.com/api/barcode";
 
+      console.log("API URL:", apiUrl);
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ barcode }),
       });
 
+      console.log("API response status:", res.status);
       if (!res.ok) {
         const errorText = await res.text();
         console.error("API error response:", errorText);
@@ -122,17 +124,21 @@ function Component() {
       }
 
       const data = await res.json();
+      console.log("API response data:", data);
 
       if (data.error || data.Error) {
+        console.error("API returned error:", data.error || data.Error);
         setError(data.error || data.Error);
         return;
       }
 
       if (!data.product_name && !data.brands) {
+        console.log("Product not found - no product_name or brands in response");
         setError("Product not found in database");
         return;
       }
 
+      console.log("Setting product data:", data);
       data.barcode = data.barcode ?? barcode;
       setProductData(data);
 
