@@ -7,7 +7,7 @@ load_dotenv()
 from google import genai
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5174", "https://eco-dex-xkid.vercel.app"], supports_credentials=True)
+CORS(app, origins=["http://localhost:5174", "https://eco-dex-mqqp.vercel.app", "https://eco-dex-xkid.vercel.app"], supports_credentials=True)
 
 CARBON_API_KEY = "Y5vaoL3kvreOztvbA6V0fw"
 CARBON_API_URL = "https://www.carboninterface.com/api/v1/estimates"
