@@ -44,7 +44,7 @@ function Component() {
         {
           fps: 10,
           qrbox: { width: 250, height: 250 },
-          supportedScanTypes: ["qr_code", "ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e"],
+          // Remove supportedScanTypes to allow all barcode types
         },
         false
       );

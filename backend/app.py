@@ -28,6 +28,8 @@ def get_json_request():
 
 @app.route('/api/barcode', methods=['POST', 'OPTIONS'])
 def barcode():
+    if request.method == 'OPTIONS':
+        return '', 204
     data = request.get_json()
     barcode_value = data.get('barcode')
     api_url = f"https://world.openfoodfacts.org/api/v0/product/{barcode_value}.json"
@@ -142,4 +144,3 @@ def suggest_alternatives():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
