@@ -7,7 +7,7 @@ load_dotenv()
 from google import genai
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["http://localhost:5174", "https://eco-dex-xkid.vercel.app"], supports_credentials=True)
 
 CARBON_API_KEY = "Y5vaoL3kvreOztvbA6V0fw"
 CARBON_API_URL = "https://www.carboninterface.com/api/v1/estimates"
@@ -29,7 +29,11 @@ def get_json_request():
 @app.route('/api/barcode', methods=['POST', 'OPTIONS'])
 def barcode():
     if request.method == 'OPTIONS':
-        return '', 204
+        response = app.make_response('')
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        return response, 204
     data = request.get_json()
     barcode_value = data.get('barcode')
     api_url = f"https://world.openfoodfacts.org/api/v0/product/{barcode_value}.json"
