@@ -103,7 +103,12 @@ function Component() {
     setError("");
     try {
       // Minimal logging
-      const res = await fetch("https://eco-dex.onrender.com/api/barcode", {
+      // Use proxy for development to avoid CORS issues
+      const apiUrl = import.meta.env.DEV
+        ? "/api/barcode"
+        : "https://eco-dex.onrender.com/api/barcode";
+
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ barcode }),
