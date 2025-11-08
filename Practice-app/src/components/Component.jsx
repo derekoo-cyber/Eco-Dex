@@ -39,18 +39,23 @@ function Component() {
     paused: !scanActive,
     constraints: {
       video: {
-        facingMode: "environment" // Use back camera on mobile
-      }
+        facingMode: { ideal: "environment" } // Try back camera, fallback to any
+      },
+      audio: false
     },
     onDecodeResult(result) {
       const code = result.getText();
+      console.log('🎉 Barcode detected:', code);
+      console.log('Raw result:', result);
 
       // Prevent duplicate detections for the same barcode in session
-      if (lastDetectedCode.current === code || processingRef.current) return;
+      if (lastDetectedCode.current === code || processingRef.current) {
+        console.log('Duplicate or processing, skipping');
+        return;
+      }
 
       lastDetectedCode.current = code;
       processingRef.current = true;
-      console.log('Barcode detected:', code);
 
       setResult(code);
       setScanActive(false);
@@ -59,7 +64,7 @@ function Component() {
       });
     },
     onError(error) {
-      console.error('ZXing scan error:', error);
+      console.error('❌ ZXing scan error:', error);
       setError(`Scan error: ${error.message}`);
     },
   });
@@ -192,7 +197,13 @@ function Component() {
             {scanActive && (
               <>
                 <div className="relative mt-4 border border-green-700/40 rounded-lg overflow-hidden">
-                  <video ref={ref} className="w-full h-80 bg-black object-cover" />
+                  <video
+                    ref={ref}
+                    className="w-full h-80 bg-black object-cover"
+                    playsInline
+                    muted
+                    autoPlay
+                  />
                   <div className="absolute inset-0 border-2 border-green-400/40 animate-pulse rounded-lg pointer-events-none" />
                 </div>
 
