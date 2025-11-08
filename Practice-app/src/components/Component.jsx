@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useZxing } from "react-zxing";
+import { Html5QrcodeScanner } from "html5-qrcode";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,6 +18,7 @@ function Component() {
   const lastDetectedCode = useRef(null);
   const [productData, setProductData] = useState(null);
   const [error, setError] = useState("");
+  const scannerRef = useRef(null);
   const [scanHistory, setScanHistory] = useState(() => {
     try {
       const saved = localStorage.getItem("scanHistory");
@@ -35,39 +36,63 @@ function Component() {
     }
   });
 
-  const { ref } = useZxing({
-    paused: !scanActive,
-    constraints: {
-      video: {
-        facingMode: { ideal: "environment" } // Try back camera, fallback to any
-      },
-      audio: false
-    },
-    onDecodeResult(result) {
-      const code = result.getText();
-      console.log('🎉 Barcode detected:', code);
-      console.log('Raw result:', result);
+  useEffect(() => {
+    if (scanActive) {
+      // Initialize scanner
+      scannerRef.current = new Html5QrcodeScanner(
+        "reader",
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          supportedScanTypes: ["qr_code", "ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e"],
+        },
+        false
+      );
 
-      // Prevent duplicate detections for the same barcode in session
-      if (lastDetectedCode.current === code || processingRef.current) {
-        console.log('Duplicate or processing, skipping');
-        return;
+      scannerRef.current.render(
+        (decodedText) => {
+          console.log('🎉 Barcode detected:', decodedText);
+
+          // Prevent duplicate detections
+          if (lastDetectedCode.current === decodedText || processingRef.current) {
+            console.log('Duplicate or processing, skipping');
+            return;
+          }
+
+          lastDetectedCode.current = decodedText;
+          processingRef.current = true;
+
+          setResult(decodedText);
+          setScanActive(false);
+
+          // Stop scanner
+          if (scannerRef.current) {
+            scannerRef.current.clear();
+          }
+
+          handleScan(decodedText).finally(() => {
+            processingRef.current = false;
+          });
+        },
+        (error) => {
+          // Ignore scan errors, they're normal
+          console.log('Scan error (normal):', error);
+        }
+      );
+    } else {
+      // Stop scanner when not active
+      if (scannerRef.current) {
+        scannerRef.current.clear();
+        scannerRef.current = null;
       }
+    }
 
-      lastDetectedCode.current = code;
-      processingRef.current = true;
-
-      setResult(code);
-      setScanActive(false);
-      handleScan(code).finally(() => {
-        processingRef.current = false;
-      });
-    },
-    onError(error) {
-      console.error('❌ ZXing scan error:', error);
-      setError(`Scan error: ${error.message}`);
-    },
-  });
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.clear();
+      }
+    };
+  }, [scanActive]);
 
   const handleScan = async (barcode) => {
     if (!barcode) return;
@@ -197,18 +222,11 @@ function Component() {
             {scanActive && (
               <>
                 <div className="relative mt-4 border border-green-700/40 rounded-lg overflow-hidden">
-                  <video
-                    ref={ref}
-                    className="w-full h-80 bg-black object-cover"
-                    playsInline
-                    muted
-                    autoPlay
-                  />
-                  <div className="absolute inset-0 border-2 border-green-400/40 animate-pulse rounded-lg pointer-events-none" />
+                  <div id="reader" className="w-full" style={{ minHeight: '320px' }}></div>
                 </div>
 
                 <div className="mt-4 text-sm text-gray-300">
-                  Status: Scanning for barcodes...
+                  Status: Scanning for barcodes... Point your camera at a barcode.
                 </div>
 
                 {/* Stop Scan Button */}
