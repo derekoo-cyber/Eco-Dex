@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import { useZxing } from "react-zxing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,16 +13,11 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 function Component() {
   const [result, setResult] = useState("");
-  const videoRef = useRef(null);
   const [scanActive, setScanActive] = useState(false);
   const processingRef = useRef(false);
   const lastDetectedCode = useRef(null);
   const [productData, setProductData] = useState(null);
   const [error, setError] = useState("");
-  const [cameraPermission, setCameraPermission] = useState(null);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [scanningStatus, setScanningStatus] = useState('idle');
-  const [scanTimeoutId, setScanTimeoutId] = useState(null);
   const [scanHistory, setScanHistory] = useState(() => {
     try {
       const saved = localStorage.getItem("scanHistory");
@@ -40,168 +35,28 @@ function Component() {
     }
   });
 
-  useEffect(() => {
-    if (!scanActive) return;
+  const { ref } = useZxing({
+    onDecodeResult(result) {
+      const code = result.getText();
 
-    const startScanning = async () => {
-      setScanningStatus('starting-camera');
+      // Prevent duplicate detections for the same barcode in session
+      if (lastDetectedCode.current === code || processingRef.current) return;
 
-      // Check permissions first
-      const hasPermission = await checkCameraPermissions();
-      if (!hasPermission) return;
+      lastDetectedCode.current = code;
+      processingRef.current = true;
+      console.log('Barcode detected:', code);
 
-      try {
-        const reader = new BrowserMultiFormatReader();
-        console.log('Starting ZXing reader...');
-
-        await reader.decodeFromVideoDevice(null, videoRef.current, (res, err) => {
-          if (err) {
-            // NotFoundException is normal when no barcode is visible, ignore
-            if (!err.name.includes("NotFoundException")) {
-              // Real errors like camera disconnection
-              console.error('ZXing scan error:', err);
-              setError(`Scan error: ${err.message}`);
-              setScanningStatus('error');
-              stopCamera();
-              setScanActive(false);
-            }
-            return;
-          }
-
-          if (res) {
-            const code = res.getText();
-
-            // Prevent duplicate detections for the same barcode in session
-            if (lastDetectedCode.current === code || processingRef.current) return;
-
-            lastDetectedCode.current = code;
-            processingRef.current = true;
-            console.log('Barcode detected:', code);
-            setScanningStatus('detected');
-            if (scanTimeoutId) clearTimeout(scanTimeoutId);
-            setScanTimeoutId(null);
-
-            setResult(code);
-            stopCamera();
-            setScanActive(false);
-            handleScan(code).finally(() => {
-              processingRef.current = false;
-            });
-          } else {
-            // Still scanning, update status if not already set
-            if (scanningStatus !== 'scanning') {
-              setScanningStatus('scanning');
-              setCameraActive(true);
-            }
-          }
-        });
-
-        console.log('ZXing reader started successfully');
-
-        // Set timeout for scanning (30 seconds)
-        const timeoutId = setTimeout(() => {
-          console.log('Scan timeout reached');
-          setScanningStatus('timeout');
-          setError('Scan timeout - no barcode detected within 30 seconds');
-          stopScan();
-        }, 30000);
-        setScanTimeoutId(timeoutId);
-
-      } catch (e) {
-        console.error("Camera start error:", e);
-        if (e.message.includes("NotFoundException")) {
-          // No barcode found, treat as timeout
-          setScanningStatus('timeout');
-          setError('No barcode detected. Please try again.');
-        } else {
-          setError(`Failed to start camera: ${e.message}`);
-          setScanningStatus('error');
-        }
-        stopCamera();
-        setScanActive(false);
-      }
-    };
-
-    startScanning();
-
-    return () => {
-      if (scanTimeoutId) {
-        clearTimeout(scanTimeoutId);
-        setScanTimeoutId(null);
-      }
-      stopCamera();
-      setScanningStatus('idle');
-    };
-  }, [scanActive]);
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-  };
-
-  const stopScan = () => {
-    console.log('Stopping scan manually');
-    if (scanTimeoutId) {
-      clearTimeout(scanTimeoutId);
-      setScanTimeoutId(null);
-    }
-    stopCamera();
-    setScanActive(false);
-    setScanningStatus('idle');
-  };
-
-  const checkCameraPermissions = async () => {
-    setScanningStatus('checking-permissions');
-    setError("");
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Camera not supported on this device');
-      setScanningStatus('error');
-      return false;
-    }
-
-    let permissionGranted = false;
-
-    try {
-      // Try modern permissions API first
-      const result = await navigator.permissions.query({ name: 'camera' });
-      console.log('Camera permission status:', result.state);
-      setCameraPermission(result.state);
-
-      if (result.state === 'denied') {
-        setError('Camera permission denied. Please allow camera access and try again.');
-        setScanningStatus('error');
-        return false;
-      }
-
-      if (result.state === 'granted') {
-        return true;
-      }
-
-      // If status is 'prompt', try to request permission by calling getUserMedia
-      console.log('Permission status is prompt, requesting camera access...');
-    } catch (e) {
-      console.log('Permissions API not supported, falling back to getUserMedia');
-    }
-
-    // Try to get camera access (either because permissions API returned 'prompt' or it's not supported)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach(track => track.stop()); // Stop test stream
-      setCameraPermission('granted');
-      console.log('Camera access granted successfully');
-      return true;
-    } catch (requestError) {
-      console.error('Camera access request failed:', requestError);
-      setCameraPermission('denied');
-      setError(`Camera access failed: ${requestError.message}. Please allow camera access and try again.`);
-      setScanningStatus('error');
-      return false;
-    }
-  };
+      setResult(code);
+      setScanActive(false);
+      handleScan(code).finally(() => {
+        processingRef.current = false;
+      });
+    },
+    onError(error) {
+      console.error('ZXing scan error:', error);
+      setError(`Scan error: ${error.message}`);
+    },
+  });
 
   const handleScan = async (barcode) => {
     if (!barcode) return;
@@ -331,45 +186,17 @@ function Component() {
             {scanActive && (
               <>
                 <div className="relative mt-4 border border-green-700/40 rounded-lg overflow-hidden">
-                  <video ref={videoRef} className="w-full h-80 bg-black object-cover" autoPlay />
-                  <div className={`absolute inset-0 border-2 animate-pulse rounded-lg pointer-events-none ${
-                    scanningStatus === 'scanning' ? 'border-green-400/40' :
-                    scanningStatus === 'checking-permissions' ? 'border-yellow-400/40' :
-                    scanningStatus === 'starting-camera' ? 'border-blue-400/40' :
-                    scanningStatus === 'detected' ? 'border-green-600/60' :
-                    scanningStatus === 'error' ? 'border-red-400/40' :
-                    'border-gray-400/40'
-                  }`} />
+                  <video ref={ref} className="w-full h-80 bg-black object-cover" />
+                  <div className="absolute inset-0 border-2 border-green-400/40 animate-pulse rounded-lg pointer-events-none" />
                 </div>
 
-                {/* Status Indicators */}
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    {cameraPermission === 'granted' ? (
-                      <span className="text-green-400">✓ Camera permission granted</span>
-                    ) : cameraPermission === 'denied' ? (
-                      <span className="text-red-400">✗ Camera permission denied</span>
-                    ) : cameraPermission === 'prompt' ? (
-                      <span className="text-yellow-400">⚠ Camera permission required</span>
-                    ) : null}
-                  </div>
-
-                  <div className="text-sm text-gray-300">
-                    Status: {
-                      scanningStatus === 'checking-permissions' ? 'Checking camera permissions...' :
-                      scanningStatus === 'starting-camera' ? 'Starting camera...' :
-                      scanningStatus === 'scanning' ? 'Scanning for barcodes...' :
-                      scanningStatus === 'detected' ? 'Barcode detected!' :
-                      scanningStatus === 'timeout' ? 'Scan timeout' :
-                      scanningStatus === 'error' ? 'Scan error' :
-                      'Idle'
-                    }
-                  </div>
+                <div className="mt-4 text-sm text-gray-300">
+                  Status: Scanning for barcodes...
                 </div>
 
                 {/* Stop Scan Button */}
                 <Button
-                  onClick={stopScan}
+                  onClick={() => setScanActive(false)}
                   className="w-full mt-4 bg-red-600 hover:bg-red-500 text-white font-semibold transition-all duration-200 active:scale-95"
                 >
                   Stop Scan
