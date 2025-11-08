@@ -36,6 +36,12 @@ function Component() {
   });
 
   const { ref } = useZxing({
+    paused: !scanActive,
+    constraints: {
+      video: {
+        facingMode: "environment" // Use back camera on mobile
+      }
+    },
     onDecodeResult(result) {
       const code = result.getText();
 
